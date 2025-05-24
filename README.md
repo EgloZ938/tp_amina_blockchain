@@ -144,8 +144,6 @@ npx live-server .
 
 👉 [Lien vers la vidéo de démonstration](https://www.youtube.com/watch?v=6yGek-r0qsA)
 
-(ajoutez le lien vers votre vidéo YouTube / Google Drive / Loom ici)
-
 ---
 
 ## 👨‍💻 Auteur
