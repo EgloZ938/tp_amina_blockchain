@@ -1,43 +1,176 @@
 <!DOCTYPE html>
-<html>
+<html lang="fr">
+
 <head>
   <meta charset="UTF-8">
-  <title>Voting DApp (lite)</title>
+  <title>DApp de Vote</title>
   <script src="https://cdn.jsdelivr.net/npm/web3@1.7.0/dist/web3.min.js"></script>
+  <script src="config.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #111;
+      color: #eee;
+      text-align: center;
+      padding: 2rem;
+    }
+
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      background: #1e90ff;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      margin: 10px;
+    }
+
+    button:hover {
+      background: #1c6bd4;
+    }
+
+    input,
+    select {
+      padding: 8px;
+      font-size: 16px;
+      margin: 5px;
+      border-radius: 5px;
+      border: 1px solid #444;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background: #222;
+      padding: 2rem;
+      border-radius: 10px;
+      box-shadow: 0 0 15px #0af;
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    ul li {
+      padding: 4px;
+    }
+
+    #out {
+      margin-top: 1rem;
+      font-weight: bold;
+    }
+  </style>
 </head>
+
 <body>
-  <h1>Voting DApp</h1>
-  <button id="connect">Connect wallet</button>
-  <br><br>
-  <button id="create">Create sample poll</button>
-  <br><br>
-  <button id="vote">Vote option 0</button>
-  <p id="out"></p>
 
-<script>
-const ABI = []; // TODO paste ABI
-const ADDR = "0x..."; // TODO replace
-let web3, account, ctr;
+  <div class="container">
+    <h1>🗳️ Application de Vote</h1>
 
-async function out(t){document.getElementById('out').innerText=t;}
+    <button id="connect">🔗 Connecter le Wallet</button>
+    <p id="account"></p>
 
-document.getElementById('connect').onclick = async ()=>{
-  await window.ethereum.request({method:'eth_requestAccounts'});
-  web3 = new Web3(window.ethereum);
-  [account]= await web3.eth.getAccounts();
-  ctr = new web3.eth.Contract(ABI, ADDR);
-  out("Connected: "+account);
-};
+    <hr>
 
-document.getElementById('create').onclick = async ()=>{
-  await ctr.methods.createPoll("Tea?",["Yes","No"],3600).send({from:account});
-  out("Poll created!");
-};
+    <h3>Créer un nouveau sondage</h3>
+    <input type="text" id="question" placeholder="Votre question"><br>
+    <input type="text" id="opt1" placeholder="Option 1">
+    <input type="text" id="opt2" placeholder="Option 2"><br>
+    <button id="create">➕ Créer le sondage</button>
 
-document.getElementById('vote').onclick = async ()=>{
-  await ctr.methods.vote(0,0).send({from:account});
-  out("Voted!");
-};
-</script>
+    <hr>
+
+    <h3>Voter pour le sondage #<span id="poll-id">0</span></h3>
+    <select id="vote-options"></select>
+    <button id="vote">🗳️ Voter</button>
+
+    <hr>
+
+    <h3>📊 Résultats</h3>
+    <button id="results">🔍 Voir les résultats</button>
+    <ul id="results-list"></ul>
+
+    <p id="out"></p>
+  </div>
+
+  <script>
+    let web3, account, ctr;
+
+    async function out(msg) {
+      document.getElementById('out').innerText = msg;
+    }
+
+    document.getElementById('connect').onclick = async () => {
+      if (!window.ethereum) return alert("Merci d’installer MetaMask !");
+      await window.ethereum.request({ method: 'eth_requestAccounts' });
+      web3 = new Web3(window.ethereum);
+      [account] = await web3.eth.getAccounts();
+
+      // ✅ Initialiser le contrat AVANT d'appeler les autres fonctions
+      ctr = new web3.eth.Contract(ABI, CONTRACT_ADDRESS);
+
+      document.getElementById('account').innerText = "Connecté : " + account;
+      out("Wallet connecté");
+
+      // ✅ Charger les options après connexion
+      await loadOptions();
+    };
+
+    document.getElementById('create').onclick = async () => {
+      const question = document.getElementById('question').value;
+      const opt1 = document.getElementById('opt1').value;
+      const opt2 = document.getElementById('opt2').value;
+      if (!question || !opt1 || !opt2) return out("Veuillez remplir tous les champs.");
+      const options = [opt1, opt2];
+      await ctr.methods.createPoll(question, options, 3600).send({ from: account });
+      out("Sondage créé avec succès !");
+    };
+
+    document.getElementById('vote').onclick = async () => {
+      const option = document.getElementById('vote-options').value;
+      await ctr.methods.vote(0, option).send({ from: account });
+      out("Vote enregistré !");
+    };
+
+    document.getElementById('results').onclick = async () => {
+      const results = await ctr.methods.getResults(0).call();
+      const details = await ctr.methods.getPollDetails(0).call();
+      const options = details[1];
+
+      const list = document.getElementById('results-list');
+      list.innerHTML = "";
+      results.forEach((count, i) => {
+        const li = document.createElement("li");
+        li.textContent = `${options[i]} : ${count} vote(s)`;
+        list.appendChild(li);
+      });
+
+      out("Résultats mis à jour");
+    };
+
+    async function loadOptions() {
+      const details = await ctr.methods.getPollDetails(0).call();
+      const options = details[1];
+      const select = document.getElementById('vote-options');
+      select.innerHTML = "";
+      options.forEach((opt, i) => {
+        const op = document.createElement("option");
+        op.value = i;
+        op.textContent = opt;
+        select.appendChild(op);
+      });
+    }
+
+    window.ethereum?.on("accountsChanged", () => {
+      location.reload();
+    });
+
+    document.getElementById('connect').addEventListener('click', async () => {
+      setTimeout(loadOptions, 2000);
+    });
+  </script>
 </body>
+
 </html>
