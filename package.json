@@ -12,5 +12,8 @@
     "license": "ISC",
     "dependencies": {
         "hardhat": "^2.24.0"
+    },
+    "devDependencies": {
+        "chai": "^5.2.0"
     }
 }
