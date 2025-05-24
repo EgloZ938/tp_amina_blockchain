@@ -1,6 +1,5 @@
 const CONTRACT_ADDRESS = "0xFcDdCAAC4206D8A7084bF905866a9cD3DA61F9b9";
 
-// Tu dois copier l'ABI depuis artifacts
 const ABI = [{
     "anonymous": false,
     "inputs": [
